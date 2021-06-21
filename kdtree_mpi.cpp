@@ -155,6 +155,12 @@ int main(int argc, char **argv){
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    /*Assumption is that we will have atleast 2 processes as this is not a sequential implementation*/
+    if(size < 2) {
+        std::cerr<<"There has to be atleast 2 processes as this is not a sequential implementation.";
+        exit(-1);
+    }
+
     std::chrono::high_resolution_clock::time_point tick;
 
     /* Our approach involves process with rank 0 acting as the main process and the rest of the 15 processes will be the worker processes
@@ -185,8 +191,7 @@ int main(int argc, char **argv){
     /*Variable to hold minimum distance for the query points*/
     float global_min_dist = 0;
 
-    /* chunk_size defines the amount of work that each worker process needs to do.*/
-    int chunk_size = std::ceil(num_points / (size-1));
+
 
     /* Define the functionality of the main process.
      * Main process(rank 0) will send each worker process with the information on what each worker process needs to do.
@@ -195,6 +200,8 @@ int main(int argc, char **argv){
     if(rank == 0) {
         int qid = -999;
         float local_min_distance = std::numeric_limits<float>::max();
+        /* chunk_size defines the amount of work that each worker process needs to do.*/
+        int chunk_size = std::ceil(num_points / (size-1));
         int start = 0;
         int end = std::min(start + chunk_size, num_points);
         for (int i = 1; i < size; i++) {
@@ -233,6 +240,7 @@ int main(int argc, char **argv){
         int start, end;
         MPI_Recv(&start, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(&end, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        int chunk_size = end - start;
         Point** points = (Point**)calloc(chunk_size, sizeof(Point*));
         int i = 0;
         for(int n = start; n < end; ++n){
